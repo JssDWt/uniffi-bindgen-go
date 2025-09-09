@@ -39,7 +39,7 @@ impl CodeType for ExternalCodeType {
     fn type_label(&self, _ci: &ComponentInterface) -> String {
         match self.kind {
             ExternalKind::DataClass => format!("{}.{}", self.namespace, self.name),
-            ExternalKind::Interface => format!("*{}.{}", self.namespace, self.name),
+            ExternalKind::Interface => format!("{}.{}", self.namespace, self.name),
             ExternalKind::Trait => format!("{}.{}", self.namespace, self.name),
         }
     }
