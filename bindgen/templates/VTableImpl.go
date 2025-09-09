@@ -67,16 +67,19 @@ func {{ callback_name }}(
 	if err != nil {
 		var actualError {{ error_type|type_name(ci) }}
 		if errors.As(err, &actualError) {
-			*callStatus = C.RustCallStatus {
-				code: C.int8_t(uniffiCallbackResultError),
-				errorBuf: {{ error_type|lower_fn }}(actualError),
+			if actualError != nil {
+				*callStatus = C.RustCallStatus {
+					code: C.int8_t(uniffiCallbackResultError),
+					errorBuf: {{ error_type|lower_fn }}(actualError),
+				}
+				return
 			}
 		} else {
 			*callStatus = C.RustCallStatus {
 				code: C.int8_t(uniffiCallbackUnexpectedResultError),
 			}
+			return
 		}
-		return
 	}
     {%- endif %}
 
