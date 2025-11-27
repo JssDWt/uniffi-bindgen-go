@@ -543,7 +543,7 @@ impl<'a> TypeRenderer<'a> {
         if self.ci.is_external(type_) {
             if let Some(module_path) = Self::get_module_path_from_type(type_) {
                 if let Ok(namespace) = self.ci.namespace_for_module_path(&module_path) {
-                    self.add_local_import(&namespace);
+                    self.add_local_import(namespace);
                 }
             }
         }
@@ -588,7 +588,7 @@ impl<'a> TypeRenderer<'a> {
             let go_mod = go_mod.trim_end_matches("/");
             format!("{go_mod}/{mod_name}")
         } else {
-            format!("{mod_name}")
+            mod_name.to_string()
         };
 
         self.imports
