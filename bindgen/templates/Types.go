@@ -4,7 +4,7 @@
 
 {%- import "macros.go" as go %}
 
-{%- for type_ in ci.iter_types() %}
+{%- for type_ in ci.iter_local_types() %}
 {%- let type_name = type_|type_name(ci) %}
 {%- let ffi_converter_name = type_|ffi_converter_name %}
 {%- let ffi_converter_instance = type_|ffi_converter_instance %}
@@ -94,9 +94,6 @@
 
 {%- when Type::Custom { name, builtin, module_path } %}
 {% include "CustomTypeTemplate.go" %}
-
-{%- when Type::External { name, module_path, kind, namespace, tagged } %}
-{%- include "ExternalTemplate.go" %}
 
 {%- else %}
 {%- endmatch %}

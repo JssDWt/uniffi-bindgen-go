@@ -88,6 +88,48 @@ pub fn canonical_name(type_: &impl AsType) -> Result<String, askama::Error> {
     Ok(oracle().find(type_).canonical_name())
 }
 
+/// Get a qualified FfiConverter instance name that works for both local and external types
+pub fn ffi_converter_instance_qualified(type_: &impl AsType, ci: &ComponentInterface) -> Result<String, askama::Error> {
+    let type_ref = type_.as_type();
+    let converter_name = oracle().find(&type_ref).ffi_converter_name();
+    let instance = format!("{}INSTANCE", converter_name);
+    
+    // Check if this is an external type and add package qualification if needed
+    if ci.is_external(&type_ref) {
+        if let Some(module_path) = get_module_path(&type_ref) {
+            if let Ok(namespace) = ci.namespace_for_module_path(&module_path) {
+                return Ok(format!("{}.{}", namespace, instance));
+            }
+        }
+    }
+    
+    Ok(instance)
+}
+
+/// Get lift expression that works for both local and external types
+pub fn lift_fn_qualified(type_: &impl AsType, ci: &ComponentInterface) -> Result<String, askama::Error> {
+    let instance = ffi_converter_instance_qualified(type_, ci)?;
+    Ok(format!("{}.Lift", instance))
+}
+
+/// Get lower expression that works for both local and external types
+pub fn lower_fn_qualified(type_: &impl AsType, ci: &ComponentInterface) -> Result<String, askama::Error> {
+    let instance = ffi_converter_instance_qualified(type_, ci)?;
+    Ok(format!("{}.Lower", instance))
+}
+
+/// Helper to extract module_path from a Type
+fn get_module_path(type_: &Type) -> Option<String> {
+    match type_ {
+        Type::Record { module_path, .. } => Some(module_path.clone()),
+        Type::Enum { module_path, .. } => Some(module_path.clone()),
+        Type::Object { module_path, .. } => Some(module_path.clone()),
+        Type::CallbackInterface { module_path, .. } => Some(module_path.clone()),
+        Type::Custom { module_path, .. } => Some(module_path.clone()),
+        _ => None,
+    }
+}
+
 pub fn class_name(nm: &str) -> Result<String, askama::Error> {
     Ok(oracle().class_name(nm))
 }
@@ -104,6 +146,7 @@ pub fn into_ffi_type(type_: &Type) -> Result<FfiType, askama::Error> {
 pub fn cgo_ffi_type(type_: &FfiType) -> Result<String, askama::Error> {
     let result = match type_ {
         FfiType::Reference(inner) => format!("{}*", cgo_ffi_type(inner)?),
+        FfiType::MutReference(inner) => format!("{}*", cgo_ffi_type(inner)?),
         other => oracle().ffi_type_label(other),
     };
 
@@ -126,6 +169,7 @@ pub fn ffi_type_name<T: Clone + Into<FfiType>>(type_: &T) -> Result<String, aska
         FfiType::RustBuffer(_) => "RustBufferI".into(),
         FfiType::VoidPointer => "*C.void".into(),
         FfiType::Reference(inner) => format!("*{}", ffi_type_name(&*inner)?),
+        FfiType::MutReference(inner) => format!("*{}", ffi_type_name(&*inner)?),
         _ => format!("C.{}", oracle().ffi_type_label(&ffi_type)),
     };
     Ok(result)
@@ -141,6 +185,7 @@ pub fn ffi_type_name_cgo_safe<T: Clone + Into<FfiType>>(
         FfiType::RustBuffer(_) => "C.RustBuffer".into(),
         FfiType::VoidPointer => "*C.void".into(),
         FfiType::Reference(inner) => format!("*{}", ffi_type_name_cgo_safe(&*inner)?),
+        FfiType::MutReference(inner) => format!("*{}", ffi_type_name_cgo_safe(&*inner)?),
         _ => format!("C.{}", oracle().ffi_type_label(&ffi_type)),
     };
     Ok(result)

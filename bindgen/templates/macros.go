@@ -151,7 +151,7 @@
 		},
 		// liftFn
 		func(ffi {{ return_type|ffi_type_name }}) {{ return_type|type_name(ci) }} {
-			return {{ return_type|lift_fn }}(ffi)
+			return {{ return_type|lift_fn_qualified(ci) }}(ffi)
 		},
     {%- when (None, Some(e)) -%}
 	uniffiRustCallAsync[{{ e|canonical_name }}](
@@ -173,7 +173,7 @@
 		},
 		// liftFn
 		func(ffi {{ return_type|ffi_type_name }}) {{ return_type|type_name(ci) }} {
-			return {{ return_type|lift_fn }}(ffi)
+			return {{ return_type|lift_fn_qualified(ci) }}(ffi)
 		},
     {%- when (None, None) -%}
 	uniffiRustCallAsync[error](
@@ -201,17 +201,7 @@
 {%- endmacro -%}
 
 {%- macro lower_fn_call(arg) -%}
-{%- match arg.as_type() -%}
-{%- when Type::External with { kind, module_path, name, namespace, tagged } -%}
-{%- match kind -%}
-{%- when ExternalKind::DataClass -%}
-RustBufferFromExternal({{ arg|lower_fn }}({{ arg.name()|var_name }}))
-{%- else -%}
 {{ arg|lower_fn }}({{ arg.name()|var_name }})
-{%- endmatch -%}
-{%- else -%}
-{{ arg|lower_fn }}({{ arg.name()|var_name }})
-{%- endmatch -%}
 {%- endmacro -%}
 
 {%- macro docstring(defn, indent_tabs) %}

@@ -1,3 +1,8 @@
+### v0.4.0+v0.29.5
+
+- **BREAKING** Upgrade to uniffi v0.29.5
+- Restore support for external types with proper package qualification and imports
+
 ### v0.4.0+v0.28.3
 - **BREAKING** Rework errors to avoid interface nil trap
   - Errors are now returned as generic error

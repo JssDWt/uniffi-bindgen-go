@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
-use uniffi_bindgen::backend::TemplateExpression;
 use uniffi_bindgen::interface::*;
 
 use self::filters::oracle;
@@ -20,7 +19,6 @@ mod callback_interface;
 mod compounds;
 mod custom;
 mod enum_;
-mod external;
 mod miscellany;
 mod object;
 mod primitives;
@@ -128,8 +126,18 @@ impl Config {
 pub struct CustomTypeConfig {
     imports: Option<Vec<String>>,
     type_name: Option<String>,
-    into_custom: TemplateExpression,
-    from_custom: TemplateExpression,
+    into_custom: String,
+    from_custom: String,
+}
+
+impl CustomTypeConfig {
+    pub fn render_into_custom(&self, name: &str) -> String {
+        self.into_custom.replace("{}", name)
+    }
+
+    pub fn render_from_custom(&self, name: &str) -> String {
+        self.from_custom.replace("{}", name)
+    }
 }
 
 /// A struct to record a go import statement.
@@ -200,7 +208,7 @@ impl<'a> GoWrapper<'a> {
 
     pub fn initialization_fns(&self) -> Vec<String> {
         self.ci
-            .iter_types()
+            .iter_local_types()
             .map(|t| GoCodeOracle.find(t))
             .filter_map(|t| t.initialization_fn())
             .collect()
@@ -323,36 +331,23 @@ impl GoCodeOracle {
             } => Box::new(compounds::MapCodeType::new(*key_type, *value_type)),
             Type::Object {
                 name,
-                module_path: _,
+                module_path,
                 imp,
-            } => Box::new(object::ObjectCodeType::new(name, imp)),
+            } => Box::new(object::ObjectCodeType::new(name, imp, module_path)),
             Type::Optional { inner_type } => {
                 Box::new(compounds::OptionalCodeType::new(*inner_type))
             }
-            Type::Record { name, .. } => Box::new(record::RecordCodeType::new(name)),
+            Type::Record { name, module_path } => Box::new(record::RecordCodeType::new(name, module_path)),
             Type::Sequence { inner_type } => {
                 Box::new(compounds::SequenceCodeType::new(*inner_type))
             }
             Type::Timestamp => Box::new(miscellany::TimestampCodeType),
             Type::Custom { name, .. } => Box::new(custom::CustomCodeType::new(name)),
 
-            Type::Enum { name, .. } => Box::new(enum_::EnumCodeType::new(name)),
-            Type::CallbackInterface { name, .. } => {
-                Box::new(callback_interface::CallbackInterfaceCodeType::new(name))
+            Type::Enum { name, module_path } => Box::new(enum_::EnumCodeType::new(name, module_path)),
+            Type::CallbackInterface { name, module_path } => {
+                Box::new(callback_interface::CallbackInterfaceCodeType::new(name, module_path))
             }
-            Type::External {
-                name,
-                module_path,
-                kind,
-                namespace,
-                tagged,
-            } => Box::new(external::ExternalCodeType::new(
-                name,
-                module_path,
-                kind,
-                namespace,
-                tagged,
-            )),
         }
     }
 
@@ -475,6 +470,9 @@ impl GoCodeOracle {
             FfiType::Reference(_ffi_type) => {
                 panic!("Cannot be constructed at this level, ffi_type_name_cgo_safe should be used")
             }
+            FfiType::MutReference(_ffi_type) => {
+                panic!("Cannot be constructed at this level, ffi_type_name_cgo_safe should be used")
+            }
         }
     }
 
@@ -509,11 +507,52 @@ pub struct TypeRenderer<'a> {
 
 impl<'a> TypeRenderer<'a> {
     fn new(config: &'a Config, ci: &'a ComponentInterface) -> Self {
-        Self {
+        let renderer = Self {
             config,
             ci,
             include_once_names: RefCell::new(HashSet::new()),
             imports: RefCell::new(BTreeSet::new()),
+        };
+        
+        // Collect external type imports from function signatures
+        renderer.collect_external_type_imports();
+        
+        renderer
+    }
+    
+    fn collect_external_type_imports(&self) {
+        // Iterate through all functions and collect external types
+        for func in self.ci.function_definitions() {
+            // Check arguments
+            for arg in func.arguments() {
+                self.add_import_for_type_internal(&arg.as_type());
+            }
+            // Check return type
+            if let Some(return_type) = func.return_type() {
+                self.add_import_for_type_internal(return_type);
+            }
+        }
+    }
+    
+    fn add_import_for_type_internal(&self, type_: &Type) {
+        // Check if this is an external type and add import if needed
+        if self.ci.is_external(type_) {
+            if let Some(module_path) = Self::get_module_path_from_type(type_) {
+                if let Ok(namespace) = self.ci.namespace_for_module_path(&module_path) {
+                    self.add_local_import(&namespace);
+                }
+            }
+        }
+    }
+    
+    fn get_module_path_from_type(type_: &Type) -> Option<String> {
+        match type_ {
+            Type::Record { module_path, .. } => Some(module_path.clone()),
+            Type::Enum { module_path, .. } => Some(module_path.clone()),
+            Type::Object { module_path, .. } => Some(module_path.clone()),
+            Type::CallbackInterface { module_path, .. } => Some(module_path.clone()),
+            Type::Custom { module_path, .. } => Some(module_path.clone()),
+            _ => None,
         }
     }
 
