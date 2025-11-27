@@ -21,20 +21,20 @@ impl RecordCodeType {
 impl CodeType for RecordCodeType {
     fn type_label(&self, ci: &ComponentInterface) -> String {
         let class_name = super::GoCodeOracle.class_name(&self.name);
-        
+
         // Check if this is an external type
         let type_ref = Type::Record {
             module_path: self.module_path.clone(),
             name: self.name.clone(),
         };
-        
+
         if ci.is_external(&type_ref) {
             // Get the namespace for the external type
             if let Ok(namespace) = ci.namespace_for_module_path(&self.module_path) {
                 return format!("{}.{}", namespace, class_name);
             }
         }
-        
+
         class_name
     }
 
@@ -48,7 +48,7 @@ impl CodeType for RecordCodeType {
 
     fn ffi_converter_name(&self) -> String {
         let name = format!("FfiConverter{}", self.canonical_name());
-        
+
         // For external types, we need to qualify with the namespace
         // We don't have access to ComponentInterface here, but we can determine externality
         // by comparing module paths. For now, just return the unqualified name since

@@ -89,11 +89,14 @@ pub fn canonical_name(type_: &impl AsType) -> Result<String, askama::Error> {
 }
 
 /// Get a qualified FfiConverter instance name that works for both local and external types
-pub fn ffi_converter_instance_qualified(type_: &impl AsType, ci: &ComponentInterface) -> Result<String, askama::Error> {
+pub fn ffi_converter_instance_qualified(
+    type_: &impl AsType,
+    ci: &ComponentInterface,
+) -> Result<String, askama::Error> {
     let type_ref = type_.as_type();
     let converter_name = oracle().find(&type_ref).ffi_converter_name();
     let instance = format!("{}INSTANCE", converter_name);
-    
+
     // Check if this is an external type and add package qualification if needed
     if ci.is_external(&type_ref) {
         if let Some(module_path) = get_module_path(&type_ref) {
@@ -102,18 +105,24 @@ pub fn ffi_converter_instance_qualified(type_: &impl AsType, ci: &ComponentInter
             }
         }
     }
-    
+
     Ok(instance)
 }
 
 /// Get lift expression that works for both local and external types
-pub fn lift_fn_qualified(type_: &impl AsType, ci: &ComponentInterface) -> Result<String, askama::Error> {
+pub fn lift_fn_qualified(
+    type_: &impl AsType,
+    ci: &ComponentInterface,
+) -> Result<String, askama::Error> {
     let instance = ffi_converter_instance_qualified(type_, ci)?;
     Ok(format!("{}.Lift", instance))
 }
 
 /// Get lower expression that works for both local and external types
-pub fn lower_fn_qualified(type_: &impl AsType, ci: &ComponentInterface) -> Result<String, askama::Error> {
+pub fn lower_fn_qualified(
+    type_: &impl AsType,
+    ci: &ComponentInterface,
+) -> Result<String, askama::Error> {
     let instance = ffi_converter_instance_qualified(type_, ci)?;
     Ok(format!("{}.Lower", instance))
 }

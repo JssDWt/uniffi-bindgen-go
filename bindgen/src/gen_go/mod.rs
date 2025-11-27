@@ -337,17 +337,21 @@ impl GoCodeOracle {
             Type::Optional { inner_type } => {
                 Box::new(compounds::OptionalCodeType::new(*inner_type))
             }
-            Type::Record { name, module_path } => Box::new(record::RecordCodeType::new(name, module_path)),
+            Type::Record { name, module_path } => {
+                Box::new(record::RecordCodeType::new(name, module_path))
+            }
             Type::Sequence { inner_type } => {
                 Box::new(compounds::SequenceCodeType::new(*inner_type))
             }
             Type::Timestamp => Box::new(miscellany::TimestampCodeType),
             Type::Custom { name, .. } => Box::new(custom::CustomCodeType::new(name)),
 
-            Type::Enum { name, module_path } => Box::new(enum_::EnumCodeType::new(name, module_path)),
-            Type::CallbackInterface { name, module_path } => {
-                Box::new(callback_interface::CallbackInterfaceCodeType::new(name, module_path))
+            Type::Enum { name, module_path } => {
+                Box::new(enum_::EnumCodeType::new(name, module_path))
             }
+            Type::CallbackInterface { name, module_path } => Box::new(
+                callback_interface::CallbackInterfaceCodeType::new(name, module_path),
+            ),
         }
     }
 
@@ -513,13 +517,13 @@ impl<'a> TypeRenderer<'a> {
             include_once_names: RefCell::new(HashSet::new()),
             imports: RefCell::new(BTreeSet::new()),
         };
-        
+
         // Collect external type imports from function signatures
         renderer.collect_external_type_imports();
-        
+
         renderer
     }
-    
+
     fn collect_external_type_imports(&self) {
         // Iterate through all functions and collect external types
         for func in self.ci.function_definitions() {
@@ -533,7 +537,7 @@ impl<'a> TypeRenderer<'a> {
             }
         }
     }
-    
+
     fn add_import_for_type_internal(&self, type_: &Type) {
         // Check if this is an external type and add import if needed
         if self.ci.is_external(type_) {
@@ -544,7 +548,7 @@ impl<'a> TypeRenderer<'a> {
             }
         }
     }
-    
+
     fn get_module_path_from_type(type_: &Type) -> Option<String> {
         match type_ {
             Type::Record { module_path, .. } => Some(module_path.clone()),

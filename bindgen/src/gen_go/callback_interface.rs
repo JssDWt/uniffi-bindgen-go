@@ -21,20 +21,20 @@ impl CallbackInterfaceCodeType {
 impl CodeType for CallbackInterfaceCodeType {
     fn type_label(&self, ci: &ComponentInterface) -> String {
         let class_name = super::GoCodeOracle.class_name(&self.id);
-        
+
         // Check if this is an external type
         let type_ref = Type::CallbackInterface {
             module_path: self.module_path.clone(),
             name: self.id.clone(),
         };
-        
+
         if ci.is_external(&type_ref) {
             // Get the namespace for the external type
             if let Ok(namespace) = ci.namespace_for_module_path(&self.module_path) {
                 return format!("{}.{}", namespace, class_name);
             }
         }
-        
+
         class_name
     }
 

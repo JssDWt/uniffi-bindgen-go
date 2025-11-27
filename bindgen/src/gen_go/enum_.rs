@@ -21,20 +21,20 @@ impl EnumCodeType {
 impl CodeType for EnumCodeType {
     fn type_label(&self, ci: &ComponentInterface) -> String {
         let mut name = oracle().class_name(&self.name);
-        
+
         // Check if this is an external type
         let type_ref = Type::Enum {
             module_path: self.module_path.clone(),
             name: self.name.clone(),
         };
-        
+
         if ci.is_external(&type_ref) {
             // Get the namespace for the external type
             if let Ok(namespace) = ci.namespace_for_module_path(&self.module_path) {
                 name = format!("{}.{}", namespace, name);
             }
         }
-        
+
         if ci.is_name_used_as_error(&self.name) {
             format!("*{name}")
         } else {
